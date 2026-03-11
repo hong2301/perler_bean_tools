@@ -543,7 +543,10 @@
             <div class="result-area" id="resultArea">
                 <div class="result-header">
                     <div class="result-count">🎨 共识别到 <span id="colorCount">0</span> 种颜色</div>
-                    <a href="#" class="btn btn-primary" id="downloadBtn">⬇️ 下载 CSV</a>
+                    <div>
+                        <a href="#" class="btn btn-secondary" id="downloadCsvBtn" style="margin-right: 10px;">📄 CSV</a>
+                        <a href="#" class="btn btn-primary" id="downloadExcelBtn">📊 Excel</a>
+                    </div>
                 </div>
                 <div class="table-container">
                     <table>
@@ -707,7 +710,8 @@
             });
 
             // 设置下载链接
-            document.getElementById('downloadBtn').href = data.csv_url;
+            document.getElementById('downloadCsvBtn').href = data.csv_url;
+            document.getElementById('downloadExcelBtn').href = data.xlsx_url;
         }
 
         function showError(message) {

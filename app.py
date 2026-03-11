@@ -6,6 +6,8 @@ import numpy as np
 from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 from paddleocr import PaddleOCR
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 import uuid
 
 # 创建 Flask 应用
@@ -222,6 +224,57 @@ def generate_csv_data(color_count):
     return data
 
 
+def generate_excel(data, output_path):
+    """生成 Excel 文件"""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "颜色统计"
+
+    # 设置表头样式
+    header_fill = PatternFill(start_color="1976D2", end_color="1976D2", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True, size=12)
+    header_alignment = Alignment(horizontal="center", vertical="center")
+
+    # 写入表头
+    headers = ['序号', '颜色编号', '色盘', '数量', '颜色名称']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+
+    # 设置边框
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+
+    # 写入数据
+    for idx, row_data in enumerate(data, start=1):
+        ws.cell(row=idx+1, column=1, value=idx)
+        ws.cell(row=idx+1, column=2, value=row_data[0])
+        ws.cell(row=idx+1, column=3, value=row_data[1])
+        ws.cell(row=idx+1, column=4, value=row_data[2])
+        ws.cell(row=idx+1, column=5, value=row_data[3])
+
+    # 设置所有单元格边框和对齐
+    for row in ws.iter_rows(min_row=1, max_row=len(data)+1, min_col=1, max_col=5):
+        for cell in row:
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    # 调整列宽
+    ws.column_dimensions['A'].width = 8
+    ws.column_dimensions['B'].width = 12
+    ws.column_dimensions['C'].width = 8
+    ws.column_dimensions['D'].width = 8
+    ws.column_dimensions['E'].width = 15
+
+    wb.save(output_path)
+
+
 @app.route('/')
 def index():
     """首页"""
@@ -262,10 +315,16 @@ def upload():
             for idx, row in enumerate(csv_data, start=1):
                 writer.writerow([idx] + list(row))
 
+        # 生成 Excel 文件
+        xlsx_filename = filename.replace('.jpg', '.xlsx')
+        xlsx_path = os.path.join(app.config['UPLOAD_FOLDER'], xlsx_filename)
+        generate_excel(csv_data, xlsx_path)
+
         return jsonify({
             'success': True,
             'data': csv_data,
-            'csv_url': f'/download/{csv_filename}'
+            'csv_url': f'/download/{csv_filename}',
+            'xlsx_url': f'/download/{xlsx_filename}'
         })
 
 
