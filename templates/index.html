@@ -95,19 +95,13 @@
 
         /* 上传区域 */
         .upload-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
-            align-items: start;
+            display: flex;
+            width: 100%;
         }
 
-        @media (max-width: 768px) {
-            .upload-section {
-                grid-template-columns: 1fr;
-            }
-        }
 
         .upload-area {
+            width: 100%;
             border: 3px dashed #90caf9;
             border-radius: 20px;
             padding: 40px 30px;
@@ -151,16 +145,26 @@
         }
 
         /* 图片预览 */
+        .preview-wrapper {
+            margin-bottom: 25px;
+            display: none;
+            width: 100%;
+        }
+
+        .preview-wrapper.show {
+            display: block;
+        }
+
         .preview-area {
             background: linear-gradient(135deg, #f5fbff 0%, #e3f2fd 100%);
             border-radius: 20px;
             padding: 20px;
-            min-height: 250px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             border: 2px solid #e3f2fd;
+            width: 100%;
         }
 
         .preview-title {
@@ -172,21 +176,11 @@
 
         .preview-image {
             max-width: 100%;
-            max-height: 300px;
+            max-height: 500px;
             border-radius: 16px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            display: none;
-        }
-
-        .preview-placeholder {
-            text-align: center;
-            color: #90caf9;
-        }
-
-        .preview-placeholder .icon {
-            font-size: 4em;
-            margin-bottom: 10px;
-            opacity: 0.5;
+            display: block;
+            object-fit: contain;
         }
 
         /* 加载动画 - 可爱风格 */
@@ -522,14 +516,12 @@
                     <div class="upload-hint">支持 JPG、PNG 格式 💙</div>
                     <input type="file" id="fileInput" accept="image/jpeg,image/png,image/jpg">
                 </div>
+            </div>
 
-                <div class="preview-area" id="previewArea">
+            <div class="preview-wrapper" id="previewWrapper">
+                <div class="preview-area">
                     <div class="preview-title">📷 图片预览</div>
                     <img class="preview-image" id="previewImage" alt="预览图">
-                    <div class="preview-placeholder" id="previewPlaceholder">
-                        <div class="icon">🖼️</div>
-                        <p>上传图片后将在这里显示</p>
-                    </div>
                 </div>
             </div>
 
@@ -615,7 +607,7 @@
         const resultArea = document.getElementById('resultArea');
         const errorArea = document.getElementById('errorArea');
         const previewImage = document.getElementById('previewImage');
-        const previewPlaceholder = document.getElementById('previewPlaceholder');
+        const previewWrapper = document.getElementById('previewWrapper');
 
         uploadArea.addEventListener('click', () => fileInput.click());
 
@@ -653,8 +645,7 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 previewImage.src = e.target.result;
-                previewImage.style.display = 'block';
-                previewPlaceholder.style.display = 'none';
+                previewWrapper.classList.add('show');
             };
             reader.readAsDataURL(file);
 
