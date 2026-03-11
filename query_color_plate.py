@@ -53,11 +53,11 @@ def save_to_csv(results, output_path='color_plate_query.csv'):
     try:
         with open(output_path, 'w', newline='', encoding='utf-8-sig') as f:
             writer = csv.writer(f)
-            # 写入表头
-            writer.writerow(['颜色编号', '色盘号'])
-            # 写入数据
-            for color_code, plate in results:
-                writer.writerow([color_code, plate])
+            # 写入表头（添加序号列）
+            writer.writerow(['序号', '颜色编号', '色盘号'])
+            # 写入数据（添加序号，从1开始）
+            for idx, (color_code, plate) in enumerate(results, start=1):
+                writer.writerow([idx, color_code, plate])
 
         print(f"查询结果已保存到: {output_path}")
     except Exception as e:

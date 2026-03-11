@@ -40,13 +40,13 @@ def load_color_mapping(json_path='color.json'):
 def generate_csv(color_count, color_mapping, output_path='output.csv'):
     """
     生成 CSV 文件
-    列：颜色编号, 色盘, 数量, 颜色名称
+    列：序号, 颜色编号, 色盘, 数量, 颜色名称
     """
     try:
         with open(output_path, 'w', newline='', encoding='utf-8-sig') as f:
             writer = csv.writer(f)
-            # 写入表头
-            writer.writerow(['颜色编号', '色盘', '数量', '颜色名称'])
+            # 写入表头（添加序号列）
+            writer.writerow(['序号', '颜色编号', '色盘', '数量', '颜色名称'])
 
             # 准备数据：[(颜色编号, 色盘, 数量, 颜色名称), ...]
             data = []
@@ -68,9 +68,9 @@ def generate_csv(color_count, color_mapping, output_path='output.csv'):
 
             data.sort(key=sort_key)
 
-            # 写入数据
-            for row in data:
-                writer.writerow(row)
+            # 写入数据（添加序号，从1开始）
+            for idx, row in enumerate(data, start=1):
+                writer.writerow([idx] + list(row))
 
         print(f"\nCSV 文件已生成: {output_path}")
     except Exception as e:
