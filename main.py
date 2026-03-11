@@ -11,7 +11,7 @@ ocr = PaddleOCR(
     use_doc_unwarping=False,  # 不使用文本图像矫正模型
     use_textline_orientation=False,  # 不使用文本行方向分类模型
 )
-recognitionThreshold=0.9
+recognitionThreshold=0.7
 overlapValue=10
 heightValue=400
 
