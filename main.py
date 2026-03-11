@@ -141,6 +141,8 @@ def getColor(filname='input.jpg',chunk_height=400,overlap=2):
     # 设置分块高度和重叠区域
     ocrResult = ocr_with_chunks(filname, chunk_height, overlap)
 
+    color_count = {}  # 用于记录每个颜色的数量
+
     if ocrResult:
         rec_texts = ocrResult.get('rec_texts', [])
         rec_scores = ocrResult.get('rec_scores', [])
@@ -149,7 +151,48 @@ def getColor(filname='input.jpg',chunk_height=400,overlap=2):
             if score > 0.9:
                 filtered_texts.append(text)
 
-        print(f"\n最终文本列表: {filtered_texts}")
+        # print(f"\n最终文本列表: {filtered_texts}")
+
+        # 处理 filtered_texts 列表
+        for item in filtered_texts:
+            # 步骤1: 判断第一个字符是否是大写字母
+            if not item or not item[0].isupper():
+                continue
+
+            # 步骤2: 按空格分割
+            parts = item.split()
+
+            for part in parts:
+                # 再次检查分割后的每个部分
+                if not part or not part[0].isupper():
+                    continue
+
+                # 步骤3: 提取字母和数字部分
+                # 找到数字开始的位置
+                letter_part = ''
+                number_part = ''
+                for char in part:
+                    if char.isalpha():
+                        letter_part += char
+                    elif char.isdigit():
+                        number_part += char
+                    else:
+                        # 遇到非字母数字字符，停止解析
+                        break
+
+                # 检查是否有有效的字母和数字
+                if letter_part and number_part:
+                    try:
+                        number = int(number_part)
+                        # 检查数字是否在 1-28 范围内
+                        if 1 <= number <= 28:
+                            color_code = f"{letter_part}{number}"
+                            # 统计数量
+                            color_count[color_code] = color_count.get(color_code, 0) + 1
+                    except ValueError:
+                        continue
+
+        # print(f"\n颜色统计结果: {color_count}")
     else:
         print("OCR 识别失败，没有返回结果")
 
@@ -157,7 +200,9 @@ def getColor(filname='input.jpg',chunk_height=400,overlap=2):
     if os.path.exists("./temp_chunk.jpg"):
         os.remove("./temp_chunk.jpg")
 
+    return color_count
+
 
 # 主流程################################################################################################################################################################################
 if __name__ == "__main__":
-    getColor('input.jpg')
+    getColorResult=getColor('input.jpg')
