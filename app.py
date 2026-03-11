@@ -3,7 +3,10 @@ import json
 import csv
 import cv2
 import numpy as np
-from flask import Flask, render_template, request, jsonify, send_file
+import threading
+import time
+from flask import Flask, render_template, request, jsonify, send_file, Response, stream_with_context
+import json as json_lib
 from werkzeug.utils import secure_filename
 from paddleocr import PaddleOCR
 from openpyxl import Workbook
@@ -164,7 +167,7 @@ def merge_results(results):
     return merged
 
 
-def ocr_with_chunks(image_path, chunk_width=0, chunk_height=1000, overlap_width=0, overlap_height=100):
+def ocr_with_chunks(image_path, chunk_width=0, chunk_height=1000, overlap_width=0, overlap_height=100, progress_callback=None):
     """分块 OCR 主函数
     
     Args:
@@ -173,6 +176,7 @@ def ocr_with_chunks(image_path, chunk_width=0, chunk_height=1000, overlap_width=
         chunk_height: 分块高度
         overlap_width: 宽度方向重叠
         overlap_height: 高度方向重叠
+        progress_callback: 进度回调函数，参数为 (percent, message)
     """
     image = cv2.imread(image_path)
 
@@ -183,26 +187,42 @@ def ocr_with_chunks(image_path, chunk_width=0, chunk_height=1000, overlap_width=
 
     # 如果不需要分块，直接识别
     if (chunk_width <= 0 or chunk_width >= width) and height <= chunk_height:
+        if progress_callback:
+            progress_callback(50, '正在进行OCR识别...')
         result = ocr.predict(image_path)
+        if progress_callback:
+            progress_callback(100, '识别完成！')
         if isinstance(result, (list, tuple)) and len(result) > 0:
             return result[0], None
         return None, "OCR 识别失败"
 
     chunks = split_image(image, chunk_width, chunk_height, overlap_width, overlap_height)
     results = []
+    total_chunks = len(chunks)
 
     for i, (chunk, x_offset, y_offset) in enumerate(chunks):
+        if progress_callback:
+            percent = int((i / total_chunks) * 80)  # 识别阶段占80%
+            progress_callback(percent, f'正在识别第 {i+1}/{total_chunks} 块...')
+        
         res = ocr_chunk(chunk, x_offset, y_offset, i + 1)
         if res:
             results.append(res)
 
+    if progress_callback:
+        progress_callback(90, '正在合并识别结果...')
+    
     merged_result = merge_results(results)
+    
+    if progress_callback:
+        progress_callback(100, '识别完成！')
+    
     return merged_result, None
 
 
-def process_image(image_path, chunk_width=0, chunk_height=heightValue, overlap_width=0, overlap_height=overlapValue):
+def process_image(image_path, chunk_width=0, chunk_height=heightValue, overlap_width=0, overlap_height=overlapValue, progress_callback=None):
     """处理图片并返回颜色统计结果"""
-    ocrResult, error = ocr_with_chunks(image_path, chunk_width, chunk_height, overlap_width, overlap_height)
+    ocrResult, error = ocr_with_chunks(image_path, chunk_width, chunk_height, overlap_width, overlap_height, progress_callback)
 
     if error:
         return None, error
@@ -331,9 +351,12 @@ def index():
     return render_template('index.html')
 
 
+# 全局变量存储处理进度
+processing_progress = {}
+
 @app.route('/upload', methods=['POST'])
 def upload():
-    """处理图片上传"""
+    """处理图片上传，支持流式进度"""
     if 'file' not in request.files:
         return jsonify({'success': False, 'error': '没有文件'})
 
@@ -341,48 +364,94 @@ def upload():
     if file.filename == '':
         return jsonify({'success': False, 'error': '没有选择文件'})
 
-    if file:
-        filename = str(uuid.uuid4()) + '.jpg'
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
+    def generate():
+        if file:
+            filename = str(uuid.uuid4()) + '.jpg'
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            
+            yield json_lib.dumps({'type': 'progress', 'percent': 5, 'message': '图片已保存，开始处理...'}) + '\n'
 
-        # 获取分块参数
-        chunk_width = request.form.get('chunk_width', type=int, default=0)
-        chunk_height = request.form.get('chunk_height', type=int, default=heightValue)
-        overlap_width = request.form.get('overlap_width', type=int, default=0)
-        overlap_height = request.form.get('overlap_height', type=int, default=overlapValue)
+            # 获取分块参数
+            chunk_width = request.form.get('chunk_width', type=int, default=0)
+            chunk_height = request.form.get('chunk_height', type=int, default=heightValue)
+            overlap_width = request.form.get('overlap_width', type=int, default=0)
+            overlap_height = request.form.get('overlap_height', type=int, default=overlapValue)
+            
+            yield json_lib.dumps({'type': 'progress', 'percent': 10, 'message': '准备分块识别...'}) + '\n'
 
-        # 处理图片，传入分块参数
-        color_count, error = process_image(filepath, chunk_width=chunk_width, chunk_height=chunk_height, 
-                                          overlap_width=overlap_width, overlap_height=overlap_height)
+            # 创建进度队列
+            progress_queue = []
+            
+            def progress_callback(percent, message):
+                # OCR识别进度映射到 10-90%
+                mapped_percent = 10 + int(percent * 0.8)
+                progress_queue.append({'type': 'progress', 'percent': mapped_percent, 'message': message})
 
-        if error:
-            return jsonify({'success': False, 'error': error})
+            # 在线程中运行处理
+            result_container = {}
+            
+            def process_thread():
+                color_count, error = process_image(filepath, chunk_width=chunk_width, chunk_height=chunk_height, 
+                                                  overlap_width=overlap_width, overlap_height=overlap_height,
+                                                  progress_callback=progress_callback)
+                result_container['color_count'] = color_count
+                result_container['error'] = error
+            
+            thread = threading.Thread(target=process_thread)
+            thread.start()
+            
+            # 等待处理完成，同时发送进度
+            last_progress_count = 0
+            while thread.is_alive() or len(progress_queue) > last_progress_count:
+                while last_progress_count < len(progress_queue):
+                    yield json_lib.dumps(progress_queue[last_progress_count]) + '\n'
+                    last_progress_count += 1
+                time.sleep(0.1)
+            
+            # 发送剩余进度
+            while last_progress_count < len(progress_queue):
+                yield json_lib.dumps(progress_queue[last_progress_count]) + '\n'
+                last_progress_count += 1
+            
+            thread.join()
+            
+            color_count = result_container.get('color_count')
+            error = result_container.get('error')
 
-        # 生成 CSV 数据
-        csv_data = generate_csv_data(color_count)
+            if error:
+                yield json_lib.dumps({'type': 'result', 'success': False, 'error': error}) + '\n'
+                return
 
-        # 保存 CSV 文件
-        csv_filename = 'openMe.csv'
-        csv_path = os.path.join(app.config['UPLOAD_FOLDER'], csv_filename)
+            yield json_lib.dumps({'type': 'progress', 'percent': 95, 'message': '正在生成结果文件...'}) + '\n'
 
-        with open(csv_path, 'w', newline='', encoding='utf-8-sig') as f:
-            writer = csv.writer(f)
-            writer.writerow(['序号', '颜色编号', '色盘', '数量', '颜色名称'])
-            for idx, row in enumerate(csv_data, start=1):
-                writer.writerow([idx] + list(row))
+            # 生成 CSV 数据
+            csv_data = generate_csv_data(color_count)
 
-        # 生成 Excel 文件
-        xlsx_filename = 'openMe.xlsx'
-        xlsx_path = os.path.join(app.config['UPLOAD_FOLDER'], xlsx_filename)
-        generate_excel(csv_data, xlsx_path)
+            # 保存 CSV 文件
+            csv_filename = 'openMe.csv'
+            csv_path = os.path.join(app.config['UPLOAD_FOLDER'], csv_filename)
 
-        return jsonify({
-            'success': True,
-            'data': csv_data,
-            'csv_url': f'/download/{csv_filename}',
-            'xlsx_url': f'/download/{xlsx_filename}'
-        })
+            with open(csv_path, 'w', newline='', encoding='utf-8-sig') as f:
+                writer = csv.writer(f)
+                writer.writerow(['序号', '颜色编号', '色盘', '数量', '颜色名称'])
+                for idx, row in enumerate(csv_data, start=1):
+                    writer.writerow([idx] + list(row))
+
+            # 生成 Excel 文件
+            xlsx_filename = 'openMe.xlsx'
+            xlsx_path = os.path.join(app.config['UPLOAD_FOLDER'], xlsx_filename)
+            generate_excel(csv_data, xlsx_path)
+
+            yield json_lib.dumps({
+                'type': 'result',
+                'success': True,
+                'data': csv_data,
+                'csv_url': f'/download/{csv_filename}',
+                'xlsx_url': f'/download/{xlsx_filename}'
+            }) + '\n'
+
+    return Response(stream_with_context(generate()), mimetype='application/x-ndjson')
 
 
 @app.route('/query', methods=['POST'])

@@ -372,6 +372,44 @@
             animation: dots 1.5s steps(4, end) infinite;
         }
 
+        .progress-container {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #e3f2fd;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #bbdefb;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #64b5f6 0%, #1976d2 100%);
+            border-radius: 8px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-text {
+            color: #1976d2;
+            font-weight: 600;
+            margin-top: 8px;
+            font-size: 1.1em;
+        }
+
+        .progress-detail {
+            color: #64b5f6;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
         @keyframes dots {
             0% {
                 content: '';
@@ -722,6 +760,13 @@
             <div class="loading" id="loadingArea">
                 <div class="cute-spinner"></div>
                 <p class="loading-text">正在努力识别中<span class="loading-dots"></span></p>
+                <div class="progress-container" id="progressContainer" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">0%</div>
+                    <div class="progress-detail" id="progressDetail">准备中...</div>
+                </div>
             </div>
 
             <div class="alert alert-error" id="errorArea" style="display: none;"></div>
@@ -1006,7 +1051,7 @@
         }
 
         // 开始识别
-        function startRecognition() {
+        async function startRecognition() {
             if (!currentFile) {
                 showError('请先上传图片哦 🥺');
                 return;
@@ -1024,30 +1069,70 @@
             formData.append('overlap_width', overlapWidth);
             formData.append('overlap_height', overlapHeight);
 
-            // 显示加载状态
+            // 显示加载状态和进度条
             loadingArea.style.display = 'block';
+            document.getElementById('progressContainer').style.display = 'block';
             resultArea.style.display = 'none';
             errorArea.style.display = 'none';
+            updateProgress(0, '准备中...');
 
-            fetch('/upload', {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => response.json())
-                .then(data => {
-                    loadingArea.style.display = 'none';
-
-                    if (data.success) {
-                        showResult(data);
-                    } else {
-                        showError(data.error || '识别失败 😢');
-                    }
-                })
-                .catch(error => {
-                    loadingArea.style.display = 'none';
-                    showError('网络错误，请重试 😢');
-                    console.error(error);
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
                 });
+
+                // 读取流式响应
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let finalData = null;
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // 保留不完整的行
+
+                    for (const line of lines) {
+                        if (line.trim()) {
+                            try {
+                                const data = JSON.parse(line);
+                                if (data.type === 'progress') {
+                                    updateProgress(data.percent, data.message);
+                                } else if (data.type === 'result') {
+                                    finalData = data;
+                                }
+                            } catch (e) {
+                                // 忽略解析错误
+                            }
+                        }
+                    }
+                }
+
+                loadingArea.style.display = 'none';
+
+                if (finalData && finalData.success) {
+                    showResult(finalData);
+                } else if (finalData) {
+                    showError(finalData.error || '识别失败 😢');
+                } else {
+                    showError('识别失败，未收到结果 😢');
+                }
+            } catch (error) {
+                loadingArea.style.display = 'none';
+                showError('网络错误，请重试 😢');
+                console.error(error);
+            }
+        }
+
+        // 更新进度
+        function updateProgress(percent, message) {
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressText').textContent = Math.round(percent) + '%';
+            document.getElementById('progressDetail').textContent = message;
         }
 
         // 查询功能
