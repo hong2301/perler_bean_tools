@@ -687,12 +687,17 @@
                                         max="10000" onchange="drawChunkOverlay()" placeholder="默认图片宽度">
                                 </div>
                                 <div class="param-item">
+                                    <label class="param-label">宽度重叠 (px)</label>
+                                    <input type="number" class="param-input" id="overlapWidth" value="0" min="0"
+                                        max="500" onchange="drawChunkOverlay()">
+                                </div>
+                                <div class="param-item">
                                     <label class="param-label">分块高度 (px)</label>
                                     <input type="number" class="param-input" id="chunkHeight" value="400" min="100"
                                         max="5000" onchange="drawChunkOverlay()">
                                 </div>
                                 <div class="param-item">
-                                    <label class="param-label">重叠高度 (px)</label>
+                                    <label class="param-label">高度重叠 (px)</label>
                                     <input type="number" class="param-input" id="overlapHeight" value="10" min="0"
                                         max="500" onchange="drawChunkOverlay()">
                                 </div>
@@ -925,7 +930,8 @@
             const chunkWidthInput = parseInt(document.getElementById('chunkWidth').value) || 0;
             const chunkWidth = chunkWidthInput > 0 ? chunkWidthInput : imgWidth;
             const chunkHeight = parseInt(document.getElementById('chunkHeight').value) || 400;
-            const overlap = parseInt(document.getElementById('overlapHeight').value) || 10;
+            const overlapWidth = parseInt(document.getElementById('overlapWidth').value) || 0;
+            const overlapHeight = parseInt(document.getElementById('overlapHeight').value) || 10;
 
             // 计算缩放比例，使图片适合 canvas
             const maxDisplayWidth = 600;
@@ -943,28 +949,42 @@
             // 绘制原图
             ctx.drawImage(img, 0, 0, displayWidth, displayHeight);
 
-            // 绘制垂直分割线（宽度方向）
             ctx.strokeStyle = '#f44336';
             ctx.lineWidth = 1;
 
+            // 绘制垂直分割线和宽度方向重叠区域
             if (chunkWidth < imgWidth) {
-                let startX = chunkWidth;
+                let startX = 0;
                 while (startX < imgWidth) {
-                    const scaledX = startX * scale;
-                    ctx.beginPath();
-                    ctx.moveTo(scaledX, 0);
-                    ctx.lineTo(scaledX, displayHeight);
-                    ctx.stroke();
-                    startX += chunkWidth;
+                    const endX = Math.min(startX + chunkWidth, imgWidth);
+                    const scaledStartX = startX * scale;
+                    const scaledOverlapWidth = overlapWidth * scale;
+
+                    // 绘制垂直分割线（红色）
+                    if (startX > 0) {
+                        ctx.beginPath();
+                        ctx.moveTo(scaledStartX, 0);
+                        ctx.lineTo(scaledStartX, displayHeight);
+                        ctx.stroke();
+                    }
+
+                    // 绘制宽度方向重叠区域（透明黄色）
+                    if (startX > 0 && scaledOverlapWidth > 0) {
+                        ctx.fillStyle = 'rgba(255, 193, 7, 0.3)';
+                        ctx.fillRect(scaledStartX, 0, Math.min(scaledOverlapWidth, displayWidth - scaledStartX), displayHeight);
+                    }
+
+                    if (endX >= imgWidth) break;
+                    startX = endX - overlapWidth;
                 }
             }
 
-            // 绘制水平分割线和重叠区域（高度方向）
+            // 绘制水平分割线和高度方向重叠区域
             let startY = 0;
             while (startY < imgHeight) {
                 const endY = Math.min(startY + chunkHeight, imgHeight);
                 const scaledStartY = startY * scale;
-                const scaledOverlap = overlap * scale;
+                const scaledOverlapHeight = overlapHeight * scale;
 
                 // 绘制水平分割线（红色）
                 if (startY > 0) {
@@ -974,14 +994,14 @@
                     ctx.stroke();
                 }
 
-                // 绘制重叠区域（透明黄色）- 只在高度方向
-                if (startY > 0 && scaledOverlap > 0) {
+                // 绘制高度方向重叠区域（透明黄色）
+                if (startY > 0 && scaledOverlapHeight > 0) {
                     ctx.fillStyle = 'rgba(255, 193, 7, 0.3)';
-                    ctx.fillRect(0, scaledStartY, displayWidth, Math.min(scaledOverlap, displayHeight - scaledStartY));
+                    ctx.fillRect(0, scaledStartY, displayWidth, Math.min(scaledOverlapHeight, displayHeight - scaledStartY));
                 }
 
                 if (endY >= imgHeight) break;
-                startY = endY - overlap;
+                startY = endY - overlapHeight;
             }
         }
 
@@ -994,13 +1014,15 @@
 
             const chunkWidth = document.getElementById('chunkWidth').value || 0;
             const chunkHeight = document.getElementById('chunkHeight').value || 400;
+            const overlapWidth = document.getElementById('overlapWidth').value || 0;
             const overlapHeight = document.getElementById('overlapHeight').value || 10;
 
             const formData = new FormData();
             formData.append('file', currentFile);
             formData.append('chunk_width', chunkWidth);
             formData.append('chunk_height', chunkHeight);
-            formData.append('overlap', overlapHeight);
+            formData.append('overlap_width', overlapWidth);
+            formData.append('overlap_height', overlapHeight);
 
             // 显示加载状态
             loadingArea.style.display = 'block';

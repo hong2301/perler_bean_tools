@@ -59,14 +59,15 @@ def load_color_mapping(json_path='color.json'):
         print(f"读取颜色配置文件出错: {e}")
 
 
-def split_image(image, chunk_width=0, chunk_height=1000, overlap=100):
+def split_image(image, chunk_width=0, chunk_height=1000, overlap_width=0, overlap_height=100):
     """将图片按宽度和高度分块
     
     Args:
         image: OpenCV 图像
         chunk_width: 分块宽度，0 表示使用图片完整宽度（不分宽度块）
         chunk_height: 分块高度
-        overlap: 重叠高度
+        overlap_width: 宽度方向重叠
+        overlap_height: 高度方向重叠
     
     Returns:
         chunks: [(chunk_image, x_offset, y_offset), ...]
@@ -77,6 +78,7 @@ def split_image(image, chunk_width=0, chunk_height=1000, overlap=100):
     # 如果 chunk_width 为 0 或大于等于图片宽度，则不分宽度块
     if chunk_width <= 0 or chunk_width >= width:
         chunk_width = width
+        overlap_width = 0  # 不分块时不使用重叠
     
     # 计算宽度方向的分块（列）
     x_positions = []
@@ -86,7 +88,7 @@ def split_image(image, chunk_width=0, chunk_height=1000, overlap=100):
         x_positions.append((start_x, end_x))
         if end_x >= width:
             break
-        start_x = end_x
+        start_x = end_x - overlap_width
     
     # 计算高度方向的分块（行）
     y_positions = []
@@ -96,7 +98,7 @@ def split_image(image, chunk_width=0, chunk_height=1000, overlap=100):
         y_positions.append((start_y, end_y))
         if end_y >= height:
             break
-        start_y = end_y - overlap
+        start_y = end_y - overlap_height
     
     # 生成所有分块
     for y_start, y_end in y_positions:
@@ -162,14 +164,15 @@ def merge_results(results):
     return merged
 
 
-def ocr_with_chunks(image_path, chunk_width=0, chunk_height=1000, overlap=100):
+def ocr_with_chunks(image_path, chunk_width=0, chunk_height=1000, overlap_width=0, overlap_height=100):
     """分块 OCR 主函数
     
     Args:
         image_path: 图片路径
         chunk_width: 分块宽度，0 表示使用完整宽度
         chunk_height: 分块高度
-        overlap: 重叠高度
+        overlap_width: 宽度方向重叠
+        overlap_height: 高度方向重叠
     """
     image = cv2.imread(image_path)
 
@@ -185,7 +188,7 @@ def ocr_with_chunks(image_path, chunk_width=0, chunk_height=1000, overlap=100):
             return result[0], None
         return None, "OCR 识别失败"
 
-    chunks = split_image(image, chunk_width, chunk_height, overlap)
+    chunks = split_image(image, chunk_width, chunk_height, overlap_width, overlap_height)
     results = []
 
     for i, (chunk, x_offset, y_offset) in enumerate(chunks):
@@ -197,9 +200,9 @@ def ocr_with_chunks(image_path, chunk_width=0, chunk_height=1000, overlap=100):
     return merged_result, None
 
 
-def process_image(image_path, chunk_width=0, chunk_height=heightValue, overlap=overlapValue):
+def process_image(image_path, chunk_width=0, chunk_height=heightValue, overlap_width=0, overlap_height=overlapValue):
     """处理图片并返回颜色统计结果"""
-    ocrResult, error = ocr_with_chunks(image_path, chunk_width, chunk_height, overlap)
+    ocrResult, error = ocr_with_chunks(image_path, chunk_width, chunk_height, overlap_width, overlap_height)
 
     if error:
         return None, error
@@ -346,10 +349,12 @@ def upload():
         # 获取分块参数
         chunk_width = request.form.get('chunk_width', type=int, default=0)
         chunk_height = request.form.get('chunk_height', type=int, default=heightValue)
-        overlap = request.form.get('overlap', type=int, default=overlapValue)
+        overlap_width = request.form.get('overlap_width', type=int, default=0)
+        overlap_height = request.form.get('overlap_height', type=int, default=overlapValue)
 
         # 处理图片，传入分块参数
-        color_count, error = process_image(filepath, chunk_width=chunk_width, chunk_height=chunk_height, overlap=overlap)
+        color_count, error = process_image(filepath, chunk_width=chunk_width, chunk_height=chunk_height, 
+                                          overlap_width=overlap_width, overlap_height=overlap_height)
 
         if error:
             return jsonify({'success': False, 'error': error})
