@@ -306,7 +306,7 @@ def upload():
         csv_data = generate_csv_data(color_count)
 
         # 保存 CSV 文件
-        csv_filename = filename.replace('.jpg', '.csv')
+        csv_filename = 'openMe.csv'
         csv_path = os.path.join(app.config['UPLOAD_FOLDER'], csv_filename)
 
         with open(csv_path, 'w', newline='', encoding='utf-8-sig') as f:
@@ -316,7 +316,7 @@ def upload():
                 writer.writerow([idx] + list(row))
 
         # 生成 Excel 文件
-        xlsx_filename = filename.replace('.jpg', '.xlsx')
+        xlsx_filename = 'openMe.xlsx'
         xlsx_path = os.path.join(app.config['UPLOAD_FOLDER'], xlsx_filename)
         generate_excel(csv_data, xlsx_path)
 
