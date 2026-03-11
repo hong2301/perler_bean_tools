@@ -11,7 +11,9 @@ ocr = PaddleOCR(
     use_doc_unwarping=False,  # 不使用文本图像矫正模型
     use_textline_orientation=False,  # 不使用文本行方向分类模型
 )
-
+recognitionThreshold=0.9
+overlapValue=10
+heightValue=400
 
 def load_color_mapping(json_path='color.json'):
     """
@@ -201,7 +203,7 @@ def ocr_with_chunks(filename, chunk_height=1000, overlap=100):
 
     return merged_result
 
-def getColor(filname='input.jpg',chunk_height=400,overlap=2):
+def getColor(filname='input.jpg',chunk_height=heightValue,overlap=overlapValue):
     # 设置分块高度和重叠区域
     ocrResult = ocr_with_chunks(filname, chunk_height, overlap)
 
@@ -212,7 +214,7 @@ def getColor(filname='input.jpg',chunk_height=400,overlap=2):
         rec_scores = ocrResult.get('rec_scores', [])
         filtered_texts = []
         for text, score in zip(rec_texts, rec_scores):
-            if score > 0.9:
+            if score > recognitionThreshold:
                 filtered_texts.append(text)
 
         # print(f"\n最终文本列表: {filtered_texts}")
