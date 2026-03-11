@@ -1,6 +1,8 @@
 import os
 import cv2
 import numpy as np
+import json
+import csv
 from paddleocr import PaddleOCR
 
 # 变量区################################################################################################################################################################################
@@ -9,6 +11,52 @@ ocr = PaddleOCR(
     use_doc_unwarping=False,  # 不使用文本图像矫正模型
     use_textline_orientation=False,  # 不使用文本行方向分类模型
 )
+
+
+def load_color_mapping(json_path='color.json'):
+    """
+    加载颜色映射表，返回 {颜色编码: (色盘, 颜色名称)}
+    """
+    color_mapping = {}
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        color_plates = data.get('color_plates', {})
+        for plate_number, colors in color_plates.items():
+            for color_info in colors:
+                code = color_info.get('code')
+                name = color_info.get('name')
+                if code:
+                    color_mapping[code] = (plate_number, name)
+    except Exception as e:
+        print(f"读取颜色配置文件出错: {e}")
+
+    return color_mapping
+
+
+def generate_csv(color_count, color_mapping, output_path='output.csv'):
+    """
+    生成 CSV 文件
+    列：颜色编号, 色盘, 数量, 颜色名称
+    """
+    try:
+        with open(output_path, 'w', newline='', encoding='utf-8-sig') as f:
+            writer = csv.writer(f)
+            # 写入表头
+            writer.writerow(['颜色编号', '色盘', '数量', '颜色名称'])
+
+            # 按颜色编号排序
+            for color_code in sorted(color_count.keys()):
+                count = color_count[color_code]
+                plate_info = color_mapping.get(color_code, ('未知', '未知'))
+                plate_number = plate_info[0]
+                color_name = plate_info[1]
+                writer.writerow([color_code, plate_number, count, color_name])
+
+        print(f"\nCSV 文件已生成: {output_path}")
+    except Exception as e:
+        print(f"生成 CSV 文件出错: {e}")
 
 
 # 函数区################################################################################################################################################################################
@@ -192,7 +240,7 @@ def getColor(filname='input.jpg',chunk_height=400,overlap=2):
                     except ValueError:
                         continue
 
-        # print(f"\n颜色统计结果: {color_count}")
+        #        print(f"\n颜色统计结果: {color_count}")
     else:
         print("OCR 识别失败，没有返回结果")
 
@@ -206,3 +254,7 @@ def getColor(filname='input.jpg',chunk_height=400,overlap=2):
 # 主流程################################################################################################################################################################################
 if __name__ == "__main__":
     getColorResult=getColor('input.jpg')
+            # 加载颜色映射并生成 CSV
+    color_mapping = load_color_mapping('color.json')
+    if getColorResult:
+        generate_csv(getColorResult, color_mapping, 'output.csv')
