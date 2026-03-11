@@ -325,6 +325,19 @@
             justify-content: center;
         }
 
+        .btn:disabled,
+        .btn-disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn:disabled:hover,
+        .btn-disabled:hover {
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
         /* 加载动画 - 可爱风格 */
         .loading {
             display: none;
@@ -1050,11 +1063,21 @@
             }
         }
 
+        // 开始识别按钮
+        let startBtn = null;
+
         // 开始识别
         async function startRecognition() {
             if (!currentFile) {
                 showError('请先上传图片哦 🥺');
                 return;
+            }
+
+            // 禁用开始识别按钮
+            startBtn = document.querySelector('button[onclick="startRecognition()"]');
+            if (startBtn) {
+                startBtn.disabled = true;
+                startBtn.classList.add('btn-disabled');
             }
 
             const chunkWidth = document.getElementById('chunkWidth').value || 0;
@@ -1075,6 +1098,9 @@
             resultArea.style.display = 'none';
             errorArea.style.display = 'none';
             updateProgress(0, '准备中...');
+
+            // 滚动到加载区域
+            loadingArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
             try {
                 const response = await fetch('/upload', {
@@ -1125,6 +1151,12 @@
                 loadingArea.style.display = 'none';
                 showError('网络错误，请重试 😢');
                 console.error(error);
+            } finally {
+                // 重新启用开始识别按钮
+                if (startBtn) {
+                    startBtn.disabled = false;
+                    startBtn.classList.remove('btn-disabled');
+                }
             }
         }
 
