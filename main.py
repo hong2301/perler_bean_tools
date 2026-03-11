@@ -46,13 +46,29 @@ def generate_csv(color_count, color_mapping, output_path='output.csv'):
             # 写入表头
             writer.writerow(['颜色编号', '色盘', '数量', '颜色名称'])
 
-            # 按颜色编号排序
-            for color_code in sorted(color_count.keys()):
+            # 准备数据：[(颜色编号, 色盘, 数量, 颜色名称), ...]
+            data = []
+            for color_code in color_count.keys():
                 count = color_count[color_code]
                 plate_info = color_mapping.get(color_code, ('未知', '未知'))
                 plate_number = plate_info[0]
                 color_name = plate_info[1]
-                writer.writerow([color_code, plate_number, count, color_name])
+                data.append((color_code, plate_number, count, color_name))
+
+            # 按色盘排序（色盘是字符串数字，转换为整数排序）
+            def sort_key(item):
+                plate = item[1]
+                try:
+                    plate_int = int(plate)
+                except ValueError:
+                    plate_int = 999  # 未知的排最后
+                return (plate_int, item[0])  # 先按色盘排序，相同色盘按颜色编号排序
+
+            data.sort(key=sort_key)
+
+            # 写入数据
+            for row in data:
+                writer.writerow(row)
 
         print(f"\nCSV 文件已生成: {output_path}")
     except Exception as e:
@@ -233,7 +249,7 @@ def getColor(filname='input.jpg',chunk_height=400,overlap=2):
                     try:
                         number = int(number_part)
                         # 检查数字是否在 1-28 范围内
-                        if 1 <= number <= 28:
+                        if 1 <= number <= 32:
                             color_code = f"{letter_part}{number}"
                             # 统计数量
                             color_count[color_code] = color_count.get(color_code, 0) + 1
