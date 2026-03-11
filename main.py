@@ -102,7 +102,7 @@ def split_image(image, chunk_height=1000, overlap=100):
     return chunks
 
 
-def ocr_chunk(chunk, y_offset):
+def ocr_chunk(chunk, y_offset,index):
     """
     对单块图片进行 OCR 识别
     :param chunk: 图片块
@@ -110,7 +110,7 @@ def ocr_chunk(chunk, y_offset):
     :return: 识别结果字典
     """
     # 临时保存图片块
-    temp_path = "./temp_chunk.jpg"
+    temp_path = f"./temp_chunk{index}.jpg"
     cv2.imwrite(temp_path, chunk)
 
     try:
@@ -193,7 +193,7 @@ def ocr_with_chunks(filename, chunk_height=1000, overlap=100):
     results = []
     for i, (chunk, y_offset) in enumerate(chunks):
         print(f"正在识别第 {i + 1}/{len(chunks)} 块...")
-        res = ocr_chunk(chunk, y_offset)
+        res = ocr_chunk(chunk, y_offset,i + 1)
         if res:
             results.append(res)
 
@@ -262,9 +262,9 @@ def getColor(filname='input.jpg',chunk_height=heightValue,overlap=overlapValue):
     else:
         print("OCR 识别失败，没有返回结果")
 
-    # 清理临时文件
-    if os.path.exists("./temp_chunk.jpg"):
-        os.remove("./temp_chunk.jpg")
+    # # 清理临时文件
+    # if os.path.exists("./temp_chunk.jpg"):
+    #     os.remove("./temp_chunk.jpg")
 
     return color_count
 
