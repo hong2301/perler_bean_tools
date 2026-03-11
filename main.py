@@ -137,27 +137,18 @@ def ocr_with_chunks(filename, chunk_height=1000, overlap=100):
 
     return merged_result
 
-
-# 主流程################################################################################################################################################################################
-if __name__ == "__main__":
+def getColor(filname='input.jpg',chunk_height=800,overlap=2):
     # 设置分块高度和重叠区域
-    ocrResult = ocr_with_chunks('input.jpg', chunk_height=800, overlap=100)
+    ocrResult = ocr_with_chunks(filname, chunk_height, overlap)
 
     if ocrResult:
         rec_texts = ocrResult.get('rec_texts', [])
         rec_scores = ocrResult.get('rec_scores', [])
-
-        # 过滤出 rec_scores > 0.9 的文本
         filtered_texts = []
-        print("\n识别结果（置信度>0.9）：")
-        print("-" * 50)
         for text, score in zip(rec_texts, rec_scores):
             if score > 0.9:
                 filtered_texts.append(text)
-                print(f"文本: {text}, 置信度: {score:.4f}")
 
-        print("-" * 50)
-        print(f"\n共识别到 {len(rec_texts)} 个文本，置信度>0.9的有 {len(filtered_texts)} 个")
         print(f"\n最终文本列表: {filtered_texts}")
     else:
         print("OCR 识别失败，没有返回结果")
@@ -165,3 +156,8 @@ if __name__ == "__main__":
     # 清理临时文件
     if os.path.exists("./temp_chunk.jpg"):
         os.remove("./temp_chunk.jpg")
+
+
+# 主流程################################################################################################################################################################################
+if __name__ == "__main__":
+    getColor('input.jpg')
