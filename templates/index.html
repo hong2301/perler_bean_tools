@@ -189,6 +189,142 @@
             gap: 12px;
         }
 
+        .preview-layout {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            align-items: flex-start;
+        }
+
+        .preview-canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: white;
+            border-radius: 12px;
+            padding: 10px;
+            min-height: 300px;
+        }
+
+        .preview-canvas {
+            max-width: 100%;
+            max-height: 500px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .preview-sidebar {
+            width: 220px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .image-info,
+        .chunk-params {
+            background: linear-gradient(135deg, #f5fbff 0%, #e3f2fd 100%);
+            border-radius: 16px;
+            padding: 15px;
+            border: 2px solid #bbdefb;
+        }
+
+        .image-info h4,
+        .chunk-params h4 {
+            color: #1976d2;
+            margin-bottom: 12px;
+            font-size: 0.95em;
+        }
+
+        .info-item,
+        .param-item {
+            margin-bottom: 10px;
+        }
+
+        .info-item:last-child,
+        .param-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label,
+        .param-label {
+            display: block;
+            color: #64b5f6;
+            font-size: 0.85em;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            color: #1976d2;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .param-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #bbdefb;
+            border-radius: 10px;
+            font-size: 0.9em;
+            color: #1976d2;
+            background: white;
+            transition: all 0.3s;
+        }
+
+        .param-input:focus {
+            outline: none;
+            border-color: #1976d2;
+            box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+        }
+
+        .param-hint {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #bbdefb;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8em;
+            color: #64b5f6;
+        }
+
+        .legend-line {
+            width: 20px;
+            height: 2px;
+            border-radius: 1px;
+        }
+
+        .legend-line.red {
+            background: #f44336;
+        }
+
+        .legend-area {
+            width: 20px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        .legend-area.yellow {
+            background: rgba(255, 193, 7, 0.5);
+        }
+
+        .preview-actions-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn-full {
+            width: 100%;
+            justify-content: center;
+        }
+
         /* 加载动画 - 可爱风格 */
         .loading {
             display: none;
@@ -527,11 +663,48 @@
             <div class="preview-wrapper" id="previewWrapper">
                 <div class="preview-area">
                     <div class="preview-title">📷 图片预览</div>
-                    <img class="preview-image" id="previewImage" alt="预览图">
-                    <div class="preview-actions">
-                        <button class="btn btn-secondary" onclick="resetUpload()">
-                            🔄 重新上传
-                        </button>
+                    <div class="preview-layout">
+                        <div class="preview-canvas-container">
+                            <canvas class="preview-canvas" id="previewCanvas"></canvas>
+                        </div>
+                        <div class="preview-sidebar">
+                            <div class="image-info" id="imageInfo">
+                                <h4>📐 图片信息</h4>
+                                <div class="info-item">
+                                    <span class="info-label">宽度:</span>
+                                    <span class="info-value" id="imgWidth">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">高度:</span>
+                                    <span class="info-value" id="imgHeight">-</span>
+                                </div>
+                            </div>
+                            <div class="chunk-params">
+                                <h4>⚙️ 分块参数</h4>
+                                <div class="param-item">
+                                    <label class="param-label">分块高度 (px)</label>
+                                    <input type="number" class="param-input" id="chunkHeight" value="1000" min="100"
+                                        max="5000" onchange="drawChunkOverlay()">
+                                </div>
+                                <div class="param-item">
+                                    <label class="param-label">重叠高度 (px)</label>
+                                    <input type="number" class="param-input" id="overlapHeight" value="100" min="0"
+                                        max="500" onchange="drawChunkOverlay()">
+                                </div>
+                                <div class="param-hint">
+                                    <span class="legend-item"><span class="legend-line red"></span> 分割线</span>
+                                    <span class="legend-item"><span class="legend-area yellow"></span> 重叠区域</span>
+                                </div>
+                            </div>
+                            <div class="preview-actions-vertical">
+                                <button class="btn btn-primary btn-full" onclick="startRecognition()">
+                                    🔍 开始识别
+                                </button>
+                                <button class="btn btn-secondary btn-full" onclick="resetUpload()">
+                                    🔄 重新上传
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -617,8 +790,8 @@
         const loadingArea = document.getElementById('loadingArea');
         const resultArea = document.getElementById('resultArea');
         const errorArea = document.getElementById('errorArea');
-        const previewImage = document.getElementById('previewImage');
         const previewWrapper = document.getElementById('previewWrapper');
+        window.previewImageData = null;
 
         uploadArea.addEventListener('click', () => fileInput.click());
 
@@ -646,50 +819,37 @@
             }
         });
 
+        // 当前选中的文件
+        let currentFile = null;
+
         function handleFile(file) {
             if (!file.type.startsWith('image/')) {
                 showError('请上传图片文件哦 🥺');
                 return;
             }
 
+            currentFile = file;
+
             // 显示图片预览
             const reader = new FileReader();
             reader.onload = (e) => {
-                previewImage.src = e.target.result;
-                previewWrapper.classList.add('show');
+                const img = new Image();
+                img.onload = () => {
+                    // 将图片数据存储到全局变量，供 canvas 使用
+                    window.previewImageData = img;
+                    previewWrapper.classList.add('show');
+                    // 显示图片尺寸信息和分块参数设置
+                    showPreviewInfo(img.width, img.height);
+                    // 绘制分块预览
+                    drawChunkOverlay();
+                };
+                img.src = e.target.result;
             };
             reader.readAsDataURL(file);
 
-            const formData = new FormData();
-            formData.append('file', file);
-
-            // 显示加载状态
+            // 隐藏上传区域，显示预览区域
             uploadArea.style.display = 'none';
-            loadingArea.style.display = 'block';
-            resultArea.style.display = 'none';
             errorArea.style.display = 'none';
-
-            fetch('/upload', {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => response.json())
-                .then(data => {
-                    loadingArea.style.display = 'none';
-
-                    if (data.success) {
-                        showResult(data);
-                    } else {
-                        showError(data.error || '识别失败 😢');
-                        uploadArea.style.display = 'block';
-                    }
-                })
-                .catch(error => {
-                    loadingArea.style.display = 'none';
-                    uploadArea.style.display = 'block';
-                    showError('网络错误，请重试 😢');
-                    console.error(error);
-                });
         }
 
         function showResult(data) {
@@ -725,15 +885,127 @@
         function resetUpload() {
             // 清空文件输入
             fileInput.value = '';
+            currentFile = null;
+            window.previewImageData = null;
             // 隐藏预览区域
             previewWrapper.classList.remove('show');
-            previewImage.src = '';
+            // 清空 canvas
+            const canvas = document.getElementById('previewCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             // 隐藏结果区域
             resultArea.style.display = 'none';
             // 隐藏错误信息
             errorArea.style.display = 'none';
             // 显示上传区域
             uploadArea.style.display = 'block';
+        }
+
+        // 显示预览图片信息
+        function showPreviewInfo(width, height) {
+            document.getElementById('imgWidth').textContent = width + ' px';
+            document.getElementById('imgHeight').textContent = height + ' px';
+        }
+
+        // 绘制分块预览
+        function drawChunkOverlay() {
+            const canvas = document.getElementById('previewCanvas');
+            const ctx = canvas.getContext('2d');
+            const img = window.previewImageData;
+
+            if (!img) return;
+
+            const imgWidth = img.width;
+            const imgHeight = img.height;
+            const chunkHeight = parseInt(document.getElementById('chunkHeight').value) || 1000;
+            const overlap = parseInt(document.getElementById('overlapHeight').value) || 100;
+
+            // 计算缩放比例，使图片适合 canvas
+            const maxDisplayWidth = 600;
+            const maxDisplayHeight = 500;
+            const scaleX = maxDisplayWidth / imgWidth;
+            const scaleY = maxDisplayHeight / imgHeight;
+            const scale = Math.min(scaleX, scaleY, 1);
+
+            const displayWidth = imgWidth * scale;
+            const displayHeight = imgHeight * scale;
+
+            canvas.width = displayWidth;
+            canvas.height = displayHeight;
+
+            // 绘制原图
+            ctx.drawImage(img, 0, 0, displayWidth, displayHeight);
+
+            // 绘制分块线和重叠区域
+            ctx.lineWidth = 1;
+            let startY = 0;
+
+            while (startY < imgHeight) {
+                const endY = Math.min(startY + chunkHeight, imgHeight);
+                const scaledStartY = startY * scale;
+                const scaledEndY = endY * scale;
+                const scaledOverlap = overlap * scale;
+
+                // 绘制分割线（红色）
+                if (startY > 0) {
+                    ctx.strokeStyle = '#f44336';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(0, scaledStartY);
+                    ctx.lineTo(displayWidth, scaledStartY);
+                    ctx.stroke();
+                }
+
+                // 绘制重叠区域（透明黄色）
+                if (startY > 0 && scaledOverlap > 0) {
+                    ctx.fillStyle = 'rgba(255, 193, 7, 0.3)';
+                    ctx.fillRect(0, scaledStartY, displayWidth, Math.min(scaledOverlap, displayHeight - scaledStartY));
+                }
+
+                if (endY >= imgHeight) break;
+                startY = endY - overlap;
+            }
+        }
+
+        // 开始识别
+        function startRecognition() {
+            if (!currentFile) {
+                showError('请先上传图片哦 🥺');
+                return;
+            }
+
+            const chunkHeight = document.getElementById('chunkHeight').value || 1000;
+            const overlapHeight = document.getElementById('overlapHeight').value || 100;
+
+            const formData = new FormData();
+            formData.append('file', currentFile);
+            formData.append('chunk_height', chunkHeight);
+            formData.append('overlap', overlapHeight);
+
+            // 显示加载状态
+            loadingArea.style.display = 'block';
+            resultArea.style.display = 'none';
+            errorArea.style.display = 'none';
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    loadingArea.style.display = 'none';
+
+                    if (data.success) {
+                        showResult(data);
+                    } else {
+                        showError(data.error || '识别失败 😢');
+                    }
+                })
+                .catch(error => {
+                    loadingArea.style.display = 'none';
+                    showError('网络错误，请重试 😢');
+                    console.error(error);
+                });
         }
 
         // 查询功能

@@ -296,8 +296,12 @@ def upload():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
 
-        # 处理图片
-        color_count, error = process_image(filepath)
+        # 获取分块参数
+        chunk_height = request.form.get('chunk_height', type=int, default=heightValue)
+        overlap = request.form.get('overlap', type=int, default=overlapValue)
+
+        # 处理图片，传入分块参数
+        color_count, error = process_image(filepath, chunk_height=chunk_height, overlap=overlap)
 
         if error:
             return jsonify({'success': False, 'error': error})
