@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>刘慧专属拼豆工具</title>
+    <title>刘慧专属拼豆工具 💙</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap');
+
         * {
             margin: 0;
             padding: 0;
@@ -12,89 +15,134 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(180deg, #e3f2fd 0%, #ffffff 50%, #e8f4f8 100%);
             min-height: 100vh;
             padding: 20px;
         }
 
         .container {
-            max-width: 900px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
+        /* 可爱标题 */
         .header {
             text-align: center;
-            color: white;
-            margin-bottom: 30px;
+            margin-bottom: 35px;
+            padding: 20px;
+        }
+
+        .header-icon {
+            font-size: 3.5em;
+            margin-bottom: 10px;
+            animation: float 3s ease-in-out infinite;
+            display: inline-block;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
         }
 
         .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            font-size: 2.2em;
+            color: #1976d2;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 0px rgba(25, 118, 210, 0.1);
+            letter-spacing: 2px;
         }
 
         .header p {
+            color: #64b5f6;
             font-size: 1.1em;
-            opacity: 0.9;
         }
 
+        /* 卡片样式 - 圆润可爱 */
         .card {
             background: white;
-            border-radius: 16px;
+            border-radius: 24px;
             padding: 30px;
             margin-bottom: 25px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 32px rgba(25, 118, 210, 0.1);
+            border: 2px solid #e3f2fd;
         }
 
         .card-title {
-            font-size: 1.5em;
-            color: #333;
-            margin-bottom: 20px;
+            font-size: 1.4em;
+            color: #1976d2;
+            margin-bottom: 25px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            font-weight: 700;
         }
 
         .card-title .icon {
-            font-size: 1.3em;
+            font-size: 1.5em;
+            background: linear-gradient(135deg, #64b5f6, #1976d2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* 上传区域 */
+        .upload-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .upload-section {
+                grid-template-columns: 1fr;
+            }
         }
 
         .upload-area {
-            border: 3px dashed #ddd;
-            border-radius: 12px;
-            padding: 50px 30px;
+            border: 3px dashed #90caf9;
+            border-radius: 20px;
+            padding: 40px 30px;
             text-align: center;
             transition: all 0.3s ease;
             cursor: pointer;
+            background: linear-gradient(135deg, #f5fbff 0%, #e3f2fd 100%);
         }
 
         .upload-area:hover {
-            border-color: #667eea;
-            background: #f8f9ff;
-        }
-
-        .upload-area.dragover {
-            border-color: #667eea;
-            background: #f0f2ff;
+            border-color: #42a5f5;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
             transform: scale(1.02);
         }
 
+        .upload-area.dragover {
+            border-color: #1976d2;
+            background: #e3f2fd;
+            transform: scale(1.03);
+        }
+
         .upload-icon {
-            font-size: 3em;
+            font-size: 3.5em;
             margin-bottom: 15px;
-            color: #667eea;
         }
 
         .upload-text {
             font-size: 1.2em;
-            color: #666;
-            margin-bottom: 10px;
+            color: #1976d2;
+            margin-bottom: 8px;
+            font-weight: 600;
         }
 
         .upload-hint {
-            color: #999;
+            color: #90caf9;
             font-size: 0.9em;
         }
 
@@ -102,29 +150,114 @@
             display: none;
         }
 
+        /* 图片预览 */
+        .preview-area {
+            background: linear-gradient(135deg, #f5fbff 0%, #e3f2fd 100%);
+            border-radius: 20px;
+            padding: 20px;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e3f2fd;
+        }
+
+        .preview-title {
+            color: #64b5f6;
+            font-size: 1em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .preview-placeholder {
+            text-align: center;
+            color: #90caf9;
+        }
+
+        .preview-placeholder .icon {
+            font-size: 4em;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+
+        /* 加载动画 - 可爱风格 */
         .loading {
             display: none;
             text-align: center;
             padding: 40px;
+            grid-column: 1 / -1;
         }
 
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        .cute-spinner {
+            position: relative;
+            width: 80px;
+            height: 80px;
             margin: 0 auto 20px;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .cute-spinner::before {
+            content: '🐻';
+            font-size: 3em;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: bounce 1s ease-in-out infinite;
         }
 
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            50% {
+                transform: translate(-50%, -60%) scale(1.1);
+            }
+        }
+
+        .loading-text {
+            color: #1976d2;
+            font-size: 1.1em;
+        }
+
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0% {
+                content: '';
+            }
+
+            25% {
+                content: '.';
+            }
+
+            50% {
+                content: '..';
+            }
+
+            75% {
+                content: '...';
+            }
+        }
+
+        /* 结果区域 */
         .result-area {
             display: none;
+            grid-column: 1 / -1;
         }
 
         .result-header {
@@ -133,54 +266,64 @@
             align-items: center;
             margin-bottom: 20px;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 15px;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #e3f2fd 0%, #f5fbff 100%);
+            border-radius: 16px;
         }
 
         .result-count {
             font-size: 1.1em;
-            color: #666;
+            color: #1976d2;
         }
 
         .result-count span {
-            color: #667eea;
+            color: #1976d2;
             font-weight: bold;
-            font-size: 1.3em;
+            font-size: 1.5em;
         }
 
+        /* 按钮 - 圆润 */
         .btn {
-            padding: 10px 25px;
+            padding: 12px 28px;
             border: none;
-            border-radius: 8px;
+            border-radius: 25px;
             font-size: 1em;
             cursor: pointer;
             transition: all 0.3s ease;
             text-decoration: none;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #42a5f5 0%, #1976d2 100%);
             color: white;
+            box-shadow: 0 4px 15px rgba(25, 118, 210, 0.3);
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(25, 118, 210, 0.4);
         }
 
         .btn-secondary {
-            background: #f0f0f0;
-            color: #666;
+            background: #e3f2fd;
+            color: #1976d2;
         }
 
         .btn-secondary:hover {
-            background: #e0e0e0;
+            background: #bbdefb;
+            transform: translateY(-2px);
         }
 
+        /* 表格 */
         .table-container {
             overflow-x: auto;
-            border-radius: 10px;
-            border: 1px solid #eee;
+            border-radius: 16px;
+            border: 2px solid #e3f2fd;
         }
 
         table {
@@ -189,33 +332,35 @@
         }
 
         th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #64b5f6 0%, #1976d2 100%);
             color: white;
             padding: 15px;
             text-align: left;
-            font-weight: 500;
+            font-weight: 600;
         }
 
         td {
             padding: 12px 15px;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid #e3f2fd;
+            color: #424242;
         }
 
         tr:hover {
-            background: #f8f9ff;
+            background: #f5fbff;
         }
 
         tr:last-child td {
             border-bottom: none;
         }
 
+        /* 查询区域 */
         .query-section {
             margin-top: 10px;
         }
 
         .input-group {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             margin-bottom: 20px;
             flex-wrap: wrap;
         }
@@ -223,16 +368,23 @@
         .input-field {
             flex: 1;
             min-width: 200px;
-            padding: 12px 15px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
+            padding: 14px 20px;
+            border: 2px solid #bbdefb;
+            border-radius: 25px;
             font-size: 1em;
-            transition: border-color 0.3s;
+            transition: all 0.3s;
+            background: #f5fbff;
         }
 
         .input-field:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #1976d2;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.1);
+        }
+
+        .input-field::placeholder {
+            color: #90caf9;
         }
 
         .query-result {
@@ -241,67 +393,156 @@
         }
 
         .alert {
-            padding: 15px;
-            border-radius: 8px;
+            padding: 15px 20px;
+            border-radius: 16px;
             margin-bottom: 20px;
+            grid-column: 1 / -1;
         }
 
         .alert-error {
-            background: #fee;
-            color: #c33;
-            border: 1px solid #fcc;
+            background: #ffebee;
+            color: #c62828;
+            border: 2px solid #ffcdd2;
         }
 
         .footer {
             text-align: center;
-            color: rgba(255,255,255,0.7);
-            padding: 20px;
-            font-size: 0.9em;
+            color: #90caf9;
+            padding: 30px;
+            font-size: 0.95em;
+        }
+
+        .footer .heart {
+            color: #e91e63;
+            animation: heartbeat 1.5s ease-in-out infinite;
+            display: inline-block;
+        }
+
+        @keyframes heartbeat {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
         }
 
         .empty-state {
             text-align: center;
-            padding: 40px;
-            color: #999;
+            padding: 50px;
+            color: #90caf9;
         }
 
         .empty-state-icon {
-            font-size: 3em;
+            font-size: 4em;
             margin-bottom: 15px;
+            opacity: 0.6;
+        }
+
+        /* 装饰元素 */
+        .decorations {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .cloud {
+            position: absolute;
+            font-size: 2em;
+            opacity: 0.1;
+            animation: float-cloud 20s ease-in-out infinite;
+        }
+
+        .cloud:nth-child(1) {
+            top: 10%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .cloud:nth-child(2) {
+            top: 20%;
+            right: 15%;
+            animation-delay: 5s;
+        }
+
+        .cloud:nth-child(3) {
+            top: 60%;
+            left: 5%;
+            animation-delay: 10s;
+        }
+
+        @keyframes float-cloud {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            50% {
+                transform: translateX(30px);
+            }
         }
     </style>
 </head>
+
 <body>
+    <!-- 装饰云朵 -->
+    <div class="decorations">
+        <div class="cloud">☁️</div>
+        <div class="cloud">☁️</div>
+        <div class="cloud">☁️</div>
+    </div>
+
     <div class="container">
         <div class="header">
-            <h1>🎨 刘慧专属拼豆工具</h1>
-            <p>上传图片自动识别颜色，快速查询色盘信息</p>
+            <div class="header-icon">🧸</div>
+            <h1>刘慧专属拼豆工具</h1>
+            <p>上传图片自动识别颜色 ✨ 快速查询色盘信息</p>
         </div>
 
         <!-- 图片上传区域 -->
         <div class="card">
             <div class="card-title">
-                <span class="icon">📷</span>
+                <span class="icon">📸</span>
                 图片识别
             </div>
 
-            <div class="upload-area" id="uploadArea">
-                <div class="upload-icon">📤</div>
-                <div class="upload-text">点击或拖拽上传图片</div>
-                <div class="upload-hint">支持 JPG、PNG 格式</div>
-                <input type="file" id="fileInput" accept="image/jpeg,image/png,image/jpg">
+            <div class="upload-section" id="uploadSection">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📤</div>
+                    <div class="upload-text">点击或拖拽上传图片</div>
+                    <div class="upload-hint">支持 JPG、PNG 格式 💙</div>
+                    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/jpg">
+                </div>
+
+                <div class="preview-area" id="previewArea">
+                    <div class="preview-title">📷 图片预览</div>
+                    <img class="preview-image" id="previewImage" alt="预览图">
+                    <div class="preview-placeholder" id="previewPlaceholder">
+                        <div class="icon">🖼️</div>
+                        <p>上传图片后将在这里显示</p>
+                    </div>
+                </div>
             </div>
 
             <div class="loading" id="loadingArea">
-                <div class="spinner"></div>
-                <p>正在识别图片，请稍候...</p>
+                <div class="cute-spinner"></div>
+                <p class="loading-text">正在努力识别中<span class="loading-dots"></span></p>
             </div>
 
             <div class="alert alert-error" id="errorArea" style="display: none;"></div>
 
             <div class="result-area" id="resultArea">
                 <div class="result-header">
-                    <div class="result-count">共识别到 <span id="colorCount">0</span> 种颜色</div>
+                    <div class="result-count">🎨 共识别到 <span id="colorCount">0</span> 种颜色</div>
                     <a href="#" class="btn btn-primary" id="downloadBtn">⬇️ 下载 CSV</a>
                 </div>
                 <div class="table-container">
@@ -325,15 +566,14 @@
         <!-- 查询工具区域 -->
         <div class="card">
             <div class="card-title">
-                <span class="icon">🔍</span>
+                <span class="icon">🔎</span>
                 色盘查询工具
             </div>
 
             <div class="query-section">
                 <div class="input-group">
-                    <input type="text" class="input-field" id="queryInput"
-                        placeholder="输入颜色编号，用空格分隔（如：E4 r1 f5）">
-                    <button class="btn btn-primary" onclick="queryColors()">查询</button>
+                    <input type="text" class="input-field" id="queryInput" placeholder="输入颜色编号，用空格分隔（如：E4 r1 f5）">
+                    <button class="btn btn-primary" onclick="queryColors()">🔍 查询</button>
                 </div>
 
                 <div class="query-result" id="queryResult">
@@ -354,13 +594,13 @@
 
                 <div class="empty-state" id="queryEmpty">
                     <div class="empty-state-icon">🎨</div>
-                    <p>输入颜色编号，快速查询所属色盘</p>
+                    <p>输入颜色编号，快速查询所属色盘 ✨</p>
                 </div>
             </div>
         </div>
 
         <div class="footer">
-            <p>刘慧专属拼豆工具 © 2024</p>
+            <p>刘慧专属拼豆工具 💙 Made with <span class="heart">❤️</span></p>
         </div>
     </div>
 
@@ -371,6 +611,8 @@
         const loadingArea = document.getElementById('loadingArea');
         const resultArea = document.getElementById('resultArea');
         const errorArea = document.getElementById('errorArea');
+        const previewImage = document.getElementById('previewImage');
+        const previewPlaceholder = document.getElementById('previewPlaceholder');
 
         uploadArea.addEventListener('click', () => fileInput.click());
 
@@ -400,9 +642,18 @@
 
         function handleFile(file) {
             if (!file.type.startsWith('image/')) {
-                showError('请上传图片文件');
+                showError('请上传图片文件哦 🥺');
                 return;
             }
+
+            // 显示图片预览
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                previewImage.style.display = 'block';
+                previewPlaceholder.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
 
             const formData = new FormData();
             formData.append('file', file);
@@ -417,23 +668,23 @@
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
-            .then(data => {
-                loadingArea.style.display = 'none';
+                .then(response => response.json())
+                .then(data => {
+                    loadingArea.style.display = 'none';
 
-                if (data.success) {
-                    showResult(data);
-                } else {
-                    showError(data.error || '识别失败');
+                    if (data.success) {
+                        showResult(data);
+                    } else {
+                        showError(data.error || '识别失败 😢');
+                        uploadArea.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    loadingArea.style.display = 'none';
                     uploadArea.style.display = 'block';
-                }
-            })
-            .catch(error => {
-                loadingArea.style.display = 'none';
-                uploadArea.style.display = 'block';
-                showError('网络错误，请重试');
-                console.error(error);
-            });
+                    showError('网络错误，请重试 😢');
+                    console.error(error);
+                });
         }
 
         function showResult(data) {
@@ -447,7 +698,7 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${index + 1}</td>
-                    <td><strong>${row[0]}</strong></td>
+                    <td><strong style="color: #1976d2;">${row[0]}</strong></td>
                     <td>${row[1]}</td>
                     <td>${row[2]}</td>
                     <td>${row[3]}</td>
@@ -479,15 +730,15 @@
                 },
                 body: JSON.stringify({ colors: input })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showQueryResult(data.results);
-                }
-            })
-            .catch(error => {
-                console.error(error);
-            });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showQueryResult(data.results);
+                    }
+                })
+                .catch(error => {
+                    console.error(error);
+                });
         }
 
         function showQueryResult(results) {
@@ -501,7 +752,7 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${index + 1}</td>
-                    <td><strong>${item.color}</strong></td>
+                    <td><strong style="color: #1976d2;">${item.color}</strong></td>
                     <td>${item.plate}</td>
                 `;
                 tbody.appendChild(tr);
@@ -516,4 +767,5 @@
         });
     </script>
 </body>
+
 </html>
