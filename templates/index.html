@@ -183,6 +183,12 @@
             object-fit: contain;
         }
 
+        .preview-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 12px;
+        }
+
         /* 加载动画 - 可爱风格 */
         .loading {
             display: none;
@@ -522,6 +528,11 @@
                 <div class="preview-area">
                     <div class="preview-title">📷 图片预览</div>
                     <img class="preview-image" id="previewImage" alt="预览图">
+                    <div class="preview-actions">
+                        <button class="btn btn-secondary" onclick="resetUpload()">
+                            🔄 重新上传
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -708,6 +719,21 @@
         function showError(message) {
             errorArea.textContent = message;
             errorArea.style.display = 'block';
+        }
+
+        // 重新上传功能
+        function resetUpload() {
+            // 清空文件输入
+            fileInput.value = '';
+            // 隐藏预览区域
+            previewWrapper.classList.remove('show');
+            previewImage.src = '';
+            // 隐藏结果区域
+            resultArea.style.display = 'none';
+            // 隐藏错误信息
+            errorArea.style.display = 'none';
+            // 显示上传区域
+            uploadArea.style.display = 'block';
         }
 
         // 查询功能
