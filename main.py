@@ -137,7 +137,7 @@ def ocr_with_chunks(filename, chunk_height=1000, overlap=100):
 
     return merged_result
 
-def getColor(filname='input.jpg',chunk_height=800,overlap=2):
+def getColor(filname='input.jpg',chunk_height=400,overlap=2):
     # 设置分块高度和重叠区域
     ocrResult = ocr_with_chunks(filname, chunk_height, overlap)
 
