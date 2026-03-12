@@ -24,6 +24,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # 全局变量：OCR 引擎和颜色映射
 ocr = None
 color_mapping = {}
+ocr_initialized = False  # OCR 初始化状态标志
 
 # 配置参数
 recognitionThreshold = 0.7
@@ -32,14 +33,21 @@ heightValue = 400
 
 
 def init_ocr():
-    """初始化 OCR 引擎"""
-    global ocr
+    """初始化 OCR 引擎（只会执行一次）"""
+    global ocr, ocr_initialized
+    
+    # 检查是否已初始化
+    if ocr_initialized and ocr is not None:
+        print("PaddleOCR 模型已加载，跳过重复初始化")
+        return
+    
     print("正在加载 PaddleOCR 模型，请稍候...")
     ocr = PaddleOCR(
         use_doc_orientation_classify=False,
         use_doc_unwarping=False,
         use_textline_orientation=False,
     )
+    ocr_initialized = True
     print("PaddleOCR 模型加载完成！")
 
 
@@ -503,4 +511,5 @@ if __name__ == '__main__':
     load_color_mapping()
 
     # 启动 Flask 应用（使用 8080 端口避免冲突）
-    app.run(debug=True, host='0.0.0.0', port=8080)
+    # use_reloader=False 防止自动重载导致 OCR 重复加载
+    app.run(debug=True, host='0.0.0.0', port=8080, use_reloader=False)
