@@ -1,0 +1,334 @@
+name: Auto Release
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (留空自动检测)'
+        required: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 设置Git配置
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+      
+      - name: 检测是否是发布提交
+        id: check_release
+        run: |
+          # 获取当前提交信息
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+          CURRENT_MSG=$(git log -1 --pretty=%B)
+          CURRENT_MSG=${CURRENT_MSG//$'\n'/}  # 移除换行符
+          
+          echo "current_commit=$CURRENT_COMMIT" >> $GITHUB_OUTPUT
+          echo "current_message=$CURRENT_MSG" >> $GITHUB_OUTPUT
+          
+          # 检查是否是 release 提交
+          if [[ "$CURRENT_MSG" =~ ^release(\(.*\))?:[[:space:]]*v?[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "is_release=true" >> $GITHUB_OUTPUT
+            VERSION=$(echo "$CURRENT_MSG" | grep -oE 'v?[0-9]+\.[0-9]+\.[0-9]+')
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "✅ 检测到发布提交: $CURRENT_MSG"
+          else
+            echo "is_release=false" >> $GITHUB_OUTPUT
+            echo "⏭️ 不是发布提交，跳过"
+          fi
+      
+      - name: 获取版本历史
+        id: get_version_history
+        if: steps.check_release.outputs.is_release == 'true'
+        run: |
+          # 获取所有 release 提交
+          RELEASE_COMMITS=$(git log --grep="^release(.*):" --pretty=format:"%H %s" --reverse)
+          
+          # 构建版本映射
+          echo "版本历史:"
+          VERSION_MAP=""
+          PREV_RELEASE_COMMIT=""
+          PREV_VERSION=""
+          
+          while IFS= read -r line; do
+            if [[ -n "$line" ]]; then
+              COMMIT_ID=$(echo "$line" | cut -d' ' -f1)
+              COMMIT_MSG=$(echo "$line" | cut -d' ' -f2-)
+              VERSION=$(echo "$COMMIT_MSG" | grep -oE 'v?[0-9]+\.[0-9]+\.[0-9]+')
+              
+              echo "  $VERSION: $COMMIT_ID"
+              
+              # 保存到环境变量
+              if [[ -n "$PREV_RELEASE_COMMIT" ]]; then
+                echo "version_$PREV_VERSION=$PREV_RELEASE_COMMIT" >> $GITHUB_ENV
+              fi
+              
+              PREV_RELEASE_COMMIT=$COMMIT_ID
+              PREV_VERSION=$VERSION
+            fi
+          done <<< "$RELEASE_COMMITS"
+          
+          # 保存最后一个版本
+          if [[ -n "$PREV_RELEASE_COMMIT" ]]; then
+            echo "version_$PREV_VERSION=$PREV_RELEASE_COMMIT" >> $GITHUB_ENV
+          fi
+          
+          # 保存当前版本的前一个版本
+          CURRENT_VERSION="${{ steps.check_release.outputs.version }}"
+          PREV_VERSION_INFO=$(git log --grep="^release(.*):" --pretty=format:"%H %s" | grep -B1 "$CURRENT_VERSION" | head -1)
+          
+          if [[ -n "$PREV_VERSION_INFO" ]]; then
+            PREV_COMMIT=$(echo "$PREV_VERSION_INFO" | cut -d' ' -f1)
+            echo "prev_release_commit=$PREV_COMMIT" >> $GITHUB_OUTPUT
+            echo "上一个发布提交: $PREV_COMMIT"
+          else
+            echo "prev_release_commit=" >> $GITHUB_OUTPUT
+            echo "首次发布，没有上一个版本"
+          fi
+      
+      - name: 获取新提交
+        id: get_new_commits
+        if: steps.check_release.outputs.is_release == 'true'
+        run: |
+          CURRENT_COMMIT="${{ steps.check_release.outputs.current_commit }}"
+          PREV_RELEASE_COMMIT="${{ steps.get_version_history.outputs.prev_release_commit }}"
+          
+          # 获取自上一个 release 以来的所有提交（不包括 release 提交本身）
+          if [[ -z "$PREV_RELEASE_COMMIT" ]]; then
+            # 首次发布，获取所有非 release 提交
+            COMMITS=$(git log --pretty=format:"%H||%s" --reverse | grep -v "^release(.*):")
+            echo "首次发布，获取所有提交"
+          else
+            # 获取两个 release 之间的提交
+            COMMITS=$(git log $PREV_RELEASE_COMMIT..$CURRENT_COMMIT^ --pretty=format:"%H||%s" --reverse | grep -v "^release(.*):")
+            echo "获取 $PREV_RELEASE_COMMIT 到 $CURRENT_COMMIT 之间的提交"
+          fi
+          
+          # 保存到文件
+          echo "$COMMITS" > new_commits.txt
+          
+          # 统计
+          COUNT=$(cat new_commits.txt | grep -v '^$' | wc -l)
+          echo "新提交数量: $COUNT"
+          
+          if [[ $COUNT -gt 0 ]]; then
+            echo "新提交列表:"
+            cat new_commits.txt | while IFS= read -r line; do
+              COMMIT_ID=$(echo "$line" | cut -d'|' -f1 | cut -c1-7)
+              COMMIT_MSG=$(echo "$line" | cut -d'|' -f2-)
+              echo "  $COMMIT_ID - $COMMIT_MSG"
+            done
+          fi
+      
+      - name: 生成CHANGELOG
+        id: changelog
+        if: steps.check_release.outputs.is_release == 'true'
+        run: |
+          VERSION="${{ steps.check_release.outputs.version }}"
+          if [[ ! "$VERSION" =~ ^v ]]; then
+            VERSION="v$VERSION"
+          fi
+          
+          CURRENT_COMMIT="${{ steps.check_release.outputs.current_commit }}"
+          PREV_RELEASE_COMMIT="${{ steps.get_version_history.outputs.prev_release_commit }}"
+          SHORT_COMMIT=$(echo $CURRENT_COMMIT | cut -c1-7)
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "commit_id=$CURRENT_COMMIT" >> $GITHUB_OUTPUT
+          
+          # 读取新提交
+          DATE=$(date +%Y-%m-%d\ %H:%M:%S)
+          
+          # 初始化分类
+          declare -A categories
+          categories=(
+            ["feat"]="✨ 新功能"
+            ["feature"]="✨ 新功能"
+            ["fix"]="🐛 Bug修复"
+            ["docs"]="📝 文档更新"
+            ["style"]="💄 样式调整"
+            ["refactor"]="♻️ 代码重构"
+            ["perf"]="⚡ 性能优化"
+            ["test"]="✅ 测试"
+            ["chore"]="🔧 构建/工具"
+            ["breaking"]="💥 破坏性变更"
+            ["other"]="📌 其他变更"
+          )
+          
+          # 初始化内容数组
+          for key in "${!categories[@]}"; do
+            eval "${key}_items=()"
+          done
+          
+          # 处理每个提交
+          if [[ -f "new_commits.txt" ]]; then
+            while IFS= read -r line; do
+              if [[ -z "$line" ]]; then
+                continue
+              fi
+              
+              # 解析 commit_id 和 message
+              COMMIT_ID=$(echo "$line" | cut -d'|' -f1 | cut -c1-7)
+              COMMIT_MSG=$(echo "$line" | cut -d'|' -f2-)
+              
+              # 解析提交类型
+              if [[ "$COMMIT_MSG" =~ ^([a-zA-Z]+)(\(([^)]*)\))?:[[:space:]]*(.*) ]]; then
+                TYPE="${BASH_REMATCH[1],,}"  # 转为小写
+                MODULE="${BASH_REMATCH[3]}"
+                DESC="${BASH_REMATCH[4]}"
+                
+                # 格式化
+                if [[ -n "$MODULE" && "$MODULE" != "()" ]]; then
+                  FORMATTED="  - **$MODULE**: $DESC ([$COMMIT_ID](${{ github.server_url }}/${{ github.repository }}/commit/$COMMIT_ID))"
+                else
+                  FORMATTED="  - $DESC ([$COMMIT_ID](${{ github.server_url }}/${{ github.repository }}/commit/$COMMIT_ID))"
+                fi
+                
+                # 分类
+                case $TYPE in
+                  feat|feature|fix|docs|style|refactor|perf|test|chore|breaking)
+                    eval "${TYPE}_items+=(\"$FORMATTED\")"
+                    ;;
+                  *)
+                    eval "other_items+=(\"$FORMATTED\")"
+                    ;;
+                esac
+              else
+                # 无法解析的提交
+                other_items+=("  - $COMMIT_MSG ([$COMMIT_ID](${{ github.server_url }}/${{ github.repository }}/commit/$COMMIT_ID))")
+              fi
+            done < new_commits.txt
+          fi
+          
+          # 生成CHANGELOG内容
+          CHANGELOG="## [$VERSION] - $DATE\n\n"
+          
+          # 添加版本信息
+          if [[ -n "$PREV_RELEASE_COMMIT" ]]; then
+            PREV_SHORT=$(echo $PREV_RELEASE_COMMIT | cut -c1-7)
+            CHANGELOG="$CHANGELOG> **提交范围**: [$PREV_SHORT..$SHORT_COMMIT](${{ github.server_url }}/${{ github.repository }}/compare/$PREV_RELEASE_COMMIT..$CURRENT_COMMIT)\n"
+          else
+            CHANGELOG="$CHANGELOG> **初始版本**: [$SHORT_COMMIT](${{ github.server_url }}/${{ github.repository }}/commit/$CURRENT_COMMIT)\n"
+          fi
+          CHANGELOG="$CHANGELOG> **发布日期**: $DATE\n\n"
+          
+          # 添加分类内容
+          for type in breaking feat feature fix perf refactor docs style test chore other; do
+            items_var="${type}_items[@]"
+            items=("${!items_var}")
+            if [[ ${#items[@]} -gt 0 ]]; then
+              category_name="${categories[$type]:-📌 其他变更}"
+              CHANGELOG="$CHANGELOG### $category_name\n"
+              for item in "${items[@]}"; do
+                CHANGELOG="$CHANGELOG$item\n"
+              done
+              CHANGELOG="$CHANGELOG\n"
+            fi
+          done
+          
+          # 保存到文件
+          echo -e "$CHANGELOG" > new_changelog.md
+          
+          echo "生成内容:"
+          cat new_changelog.md
+          
+          # 保存到输出
+          {
+            echo "changelog<<EOF"
+            echo -e "$CHANGELOG"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+      
+      - name: 更新CHANGELOG.md
+        if: steps.changelog.outputs.version != ''
+        run: |
+          VERSION="${{ steps.changelog.outputs.version }}"
+          COMMIT_ID="${{ steps.changelog.outputs.commit_id }}"
+          
+          # 创建临时文件
+          TEMP_CHANGELOG=$(mktemp)
+          
+          # 写入标题
+          echo "# 更新日志" > "$TEMP_CHANGELOG"
+          echo "" >> "$TEMP_CHANGELOG"
+          
+          # 写入新内容
+          cat new_changelog.md >> "$TEMP_CHANGELOG"
+          echo "" >> "$TEMP_CHANGELOG"
+          
+          # 如果存在旧CHANGELOG，追加旧内容（跳过标题和可能重复的当前版本）
+          if [[ -f "CHANGELOG.md" ]]; then
+            # 检查是否已存在相同版本（通过commit_id）
+            if grep -q "$COMMIT_ID" CHANGELOG.md; then
+              echo "⚠️ 版本 $VERSION 已存在（通过commit_id检测），跳过更新"
+              exit 0
+            fi
+            
+            # 追加旧内容（跳过第一行标题）
+            tail -n +2 CHANGELOG.md >> "$TEMP_CHANGELOG"
+          fi
+          
+          # 替换原文件
+          mv "$TEMP_CHANGELOG" CHANGELOG.md
+          
+          # 提交CHANGELOG.md
+          git add CHANGELOG.md
+          
+          # 修改发布提交，添加CHANGELOG更新
+          git commit --amend --no-edit
+          git push --force-with-lease
+          
+          echo "✅ CHANGELOG.md 已更新，版本: $VERSION (commit: $COMMIT_ID)"
+      
+      - name: 创建标签
+        if: steps.changelog.outputs.version != ''
+        run: |
+          VERSION="${{ steps.changelog.outputs.version }}"
+          COMMIT_ID="${{ steps.changelog.outputs.commit_id }}"
+          
+          # 检查标签是否已存在
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            EXISTING_COMMIT=$(git rev-list -n 1 "$VERSION")
+            if [[ "$EXISTING_COMMIT" == "$COMMIT_ID" ]]; then
+              echo "✅ 标签 $VERSION 已存在且指向正确提交"
+            else
+              echo "⚠️ 标签 $VERSION 已存在但指向不同提交，更新标签"
+              git tag -d "$VERSION"
+              git push origin --delete "$VERSION" || true
+              git tag -a "$VERSION" -m "Release $VERSION" "$COMMIT_ID"
+              git push origin "$VERSION"
+            fi
+          else
+            echo "创建新标签: $VERSION"
+            git tag -a "$VERSION" -m "Release $VERSION" "$COMMIT_ID"
+            git push origin "$VERSION"
+          fi
+      
+      - name: 创建/更新Release
+        if: steps.changelog.outputs.version != ''
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.changelog.outputs.version }}
+          name: Release ${{ steps.changelog.outputs.version }}
+          body: |
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ---
+            **Commit**: ${{ steps.changelog.outputs.commit_id }}
+          target_commitish: ${{ steps.changelog.outputs.commit_id }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
