@@ -167,6 +167,20 @@ def merge_results(results):
     return merged
 
 
+def cleanup_temp_chunks():
+    """清理临时分块图片文件"""
+    try:
+        for filename in os.listdir('.'):
+            if filename.startswith('temp_chunk') and filename.endswith('.jpg'):
+                try:
+                    os.remove(filename)
+                    print(f"已删除临时文件: {filename}")
+                except Exception as e:
+                    print(f"删除临时文件失败 {filename}: {e}")
+    except Exception as e:
+        print(f"清理临时文件时出错: {e}")
+
+
 def ocr_with_chunks(image_path, chunk_width=0, chunk_height=1000, overlap_width=0, overlap_height=100, progress_callback=None):
     """分块 OCR 主函数
     
@@ -213,6 +227,9 @@ def ocr_with_chunks(image_path, chunk_width=0, chunk_height=1000, overlap_width=
         progress_callback(90, '正在合并识别结果...')
     
     merged_result = merge_results(results)
+    
+    # 清理临时分块文件
+    cleanup_temp_chunks()
     
     if progress_callback:
         progress_callback(100, '识别完成！')

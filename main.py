@@ -131,6 +131,20 @@ def ocr_chunk(chunk, y_offset,index):
     return None
 
 
+def cleanup_temp_chunks():
+    """清理临时分块图片文件"""
+    try:
+        for filename in os.listdir('.'):
+            if filename.startswith('temp_chunk') and filename.endswith('.jpg'):
+                try:
+                    os.remove(filename)
+                    print(f"已删除临时文件: {filename}")
+                except Exception as e:
+                    print(f"删除临时文件失败 {filename}: {e}")
+    except Exception as e:
+        print(f"清理临时文件时出错: {e}")
+
+
 def merge_results(results):
     """
     合并多个分块的 OCR 结果
@@ -199,6 +213,10 @@ def ocr_with_chunks(filename, chunk_height=1000, overlap=100):
 
     # 合并结果
     merged_result = merge_results(results)
+    
+    # 清理临时分块文件
+    cleanup_temp_chunks()
+    
     print(f"分块识别完成，共识别到 {len(merged_result['rec_texts'])} 个文本")
 
     return merged_result
